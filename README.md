@@ -6,6 +6,7 @@ Language Used:
 - R (R studio)
 
 Usage (For team)
+
 -네이버 QnA 크롤러: 복붙 ->실행
 -뉴스 크롤러: 현재 40개 오류 무시하시고 복붙 -> 실행
 -R wordcloud: R 3.6.1에서만 실행 가능합니다. 복붙 -> 실행
