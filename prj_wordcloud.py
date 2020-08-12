@@ -2,13 +2,14 @@
 """
 Created on Sun Aug  9 19:58:48 2020
 @author: Heedong Yang
-@Usage: 폐교활용방안 마이닝된 텍스트 워드클라우드 생성
+@Usage: 폐교활용방안 마이닝된 텍스트 워드클라우드 생
 """
 from konlpy.tag import Okt
 from collections import Counter
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
+import pandas as pd
 '''
 신문사 = 20건 이상 등장한 단어들... 미만에서도 쓸만한게 있어보임
 우수사례 = 1~2번 등장한 단어중에서도 쓸만한게 많아보임
@@ -85,8 +86,14 @@ if __name__ == "__main__":
     okt = Okt()
     ## 파일명 리스트
     text_files = ['뉴스자료텍스트.txt','우수사례텍스트.txt','폐교연구자료텍스트.txt']
-    ## 명사 개수 체크
-    cnt = checker(text_files[0], 5000)
-    print(cnt)
+    ## 명사 개수 체크  우수사례텍스트=>2000개, 연구자료텍스트=>6000개, 뉴스텍스트=> 10000ㄱ
+    cnt = checker(text_files[0], 10000)
+    print(cnt[9900:])
+    df = pd.DataFrame(cnt,columns = ['단어','빈도수'])
+    print(df)
+    df.to_csv(r'C:/Users/Heedong/Desktop/빅데이터_prj/폐교연구자료텍스트.txt', index=False, header=True, encoding='utf-8-sig')
     ## 플롯팅
     #plotter(text_files)
+
+
+
