@@ -3,7 +3,7 @@
 """
 Created on Sun Jul 25 14:13:50 2020
 
-@author: Heedong Yang
+@author: 남보은 안한성 양희동 이지연
 @purpose: 
     Bigdata Project "Utilize Closed school"
     Crawling newspaper articles for text mining

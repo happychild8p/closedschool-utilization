@@ -4,7 +4,7 @@
 """
 Created on Sun Jul 26 18:33:50 2020
 
-@author: Heedong Yang
+@author: 남보은 안한성 양희동 이지연
 @purpose: 
     Bigdata Project "Utilize Closed school"
     Crawling naver qna answers for text mining

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 Created on Sun Aug  9 19:58:48 2020
-@author: Heedong Yang
+@author: 남보은 안한성 양희동 이지연
 @Usage: 폐교활용방안 마이닝된 텍스트 워드클라우드 생
 """
 from konlpy.tag import Okt
