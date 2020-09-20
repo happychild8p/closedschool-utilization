@@ -1,0 +1,101 @@
+#!/usr/bin/python3
+'''
+Closed School Utilization with text mining
+Purpose: To extract useful keywords could be assist those who want to utilze closed school
+Author: Heedong Yang
+
+After crawling news
+Use news, theses and example text to
+1. Clean it: 
+2. Tokenize
+3-1. Create dtm
+3-2. Apply tfidf
+4. Apply LDA to group words
+'''
+import pandas as pd
+import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+from konlpy.tag import Hannanum
+import re
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+from gensim.models import Word2Vec
+
+def get_text(file):
+    f = open(file, 'r', encoding='utf-8')
+    newsStr = f.read()
+    doclist = list(newsStr.split("|"))
+    f.close()
+    return doclist
+
+def stopword_elimination(doclist):
+    cleaned_docs = []
+    for doc in doclist:
+        cleaned_doc = re.sub('[a-zA-z]','',doc)
+        cleaned_doc = re.sub('[0-9]','',cleaned_doc)
+        cleaned_doc = re.sub('[\{\}\[\]\/?.,;:\)*~`!^\-_+<>@\#$%&\\\=\(\'\"\♥\♡\ㅋ\ㅠ\ㅜ\ㄱ\ㅎ\ㄲ\ㅡ]','',cleaned_doc)
+        cleaned_doc = re.sub('\s+',' ',cleaned_doc)
+        cleaned_docs.append(cleaned_doc)
+    return cleaned_docs
+
+def tokenization(cleaned_docs):
+    han = Hannanum()
+    tokenized_docs = []
+    while ' ' in cleaned_docs: cleaned_docs.remove(' ')
+    for doc in cleaned_docs:
+        nouns_in_doc = []
+        for noun in han.nouns(doc):
+            if len(noun) > 1: nouns_in_doc.append(noun)
+        tokenized_docs.append(nouns_in_doc)
+    return tokenized_docs
+
+def create_dtm(tokenized_docs, mindf = 2):
+    docs_list = []
+    dtm = CountVectorizer(min_df=mindf)
+    for each in tokenized_docs:
+        docs_list.append(' '.join(each))
+    dt_matrix = dtm.fit_transform(docs_list)
+    dt_terms = dtm.get_feature_names()
+    return dtm, dt_matrix, dt_terms
+
+def tf_idf(tokenized_docs):
+    detokenized_docs = []
+    for doc in tokenized_docs:
+        text = ' '.join(doc)
+        detokenized_docs.append(text)
+        
+    tfidf = TfidfVectorizer(min_df=1, max_features= 500)
+    tfidf_matrix = tfidf.fit_transform(detokenized_docs)
+    tfidf_terms = tfidf.get_feature_names()
+    return tfidf, tfidf_matrix, tfidf_terms
+
+def apply_lda(topics, iteration, matrix, terms): 
+    #### Latent Dirichlet Allocation
+    lda_model = LatentDirichletAllocation(n_components=topics , learning_method='online', random_state=777, max_iter=iteration)
+    lda_top = lda_model.fit_transform(matrix)
+
+    get_topics(lda_model.components_, terms)
+
+def get_topics(components, feature_names, n=10):
+    for idx, topic in enumerate(components):
+        print("Topic %d :" % (idx+1), [(feature_names[i], topic[i].round(2)) for i in topic.argsort()[:-n -1:-1]])
+    
+def into_df():
+    pass
+  
+    
+if __name__ == "__main__":
+    doclist = get_text("논문텍스트.txt")
+    cleaned_docs = stopword_elimination(doclist)
+    tokenized_docs = tokenization(cleaned_docs)
+    
+    #### df matrix로 lda
+    dtm, dt_matrix, dt_terms = create_dtm(tokenized_docs, 3)
+    apply_lda(30, 50, dt_matrix, dt_terms)
+    
+    #### tf-idf maxrix로 lda  
+
+    tfidf, tfidf_matrix, tfidf_terms = tf_idf(tokenized_docs)
+    apply_lda(30, 50, tfidf_matrix, tfidf_terms)
+    
