@@ -71,11 +71,7 @@ def apply_lda(topics, iteration, wrd_per_grp , matrix, terms):
     if a == 'y':
         for idx, topic in enumerate(lda_model.components_):
             print("Topic %d :" % (idx+1), [(terms[i], topic[i].round(2)) for i in topic.argsort()[:-wrd_per_grp -1:-1]])
-'''
-def get_topics(components, feature_names, n=30):
-    for idx, topic in enumerate(components):
-        print("Topic %d :" % (idx+1), [(feature_names[i], topic[i].round(2)) for i in topic.argsort()[:-n -1:-1]])
-'''
+
 def gensim_lda(tokenized_docs, n_tpic=20, n_wrd=10):
     dictionary = gensim.corpora.Dictionary(tokenized_docs)
     corpus = [dictionary.doc2bow(text) for text in tokenized_docs]
