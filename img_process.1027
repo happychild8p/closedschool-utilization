@@ -1,10 +1,11 @@
 #!/usr/bin/python3
+
 import cv2
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 import re
 import pandas as pd
+import matplotlib.font_manager as fm
 
 def get_features():
     features = ["agricultural_area","central_commercial_area","commercial_area","green_area",
@@ -27,7 +28,7 @@ def get_data():
     for path in names:
         path = re.sub("\s","", path)
         pathes.append(f'C:/Users/Heedong/testset/{path}')
-        names_refined.append(path)
+        names_refined.append(path.strip('.png'))
     f.close()
     datalist = []   ### opencv 한글경로 깨짐 문제 해결
     for path in pathes:
@@ -37,6 +38,13 @@ def get_data():
         datalist.append(cv2.imdecode(npArray, cv2.IMREAD_UNCHANGED))
     return datalist, names_refined
     #return cv2.imdecode(npArray, cv2.IMREAD_UNCHANGED)
+def get_data_usage():
+    f = open('C:/Users/Heedong/testset/names_usage.txt','rt', encoding='utf-8')
+    li=[]; usage_dict = {}
+    for each in f.read().split("\n"): li.append(each.split(','))
+    for each in li[:-3]: usage_dict[each[0].strip('.png')] = each[1]
+    f.close()
+    return usage_dict
 
 def get_test(filepath):
     stream = open(filepath.encode("utf-8"), 'rb')
@@ -96,28 +104,16 @@ def histogram_matching_unflatten(dataList, names, test):
         values.append(sub_val)
     return dict(zip(names, values))
 
-if __name__ == "__main__":
-    dataList, names = get_data()
-    test = get_test("jubong.png")
-
-    #result_dict = histogram_matching_flatten(dataList, names, test)
-    result_dict = histogram_matching_unflatten(dataList, names, test)
-
-def get_names(result_dict, nums):
-    correlation = []; chi_square = []; intersection = []; bhattacharyya = []; result_image_names = []
+def get_idxlist(result_dict, nums):
+    correlation = []; chi_square = []; intersection = []; bhattacharyya = [];
     for name in names:
         correlation.append(result_dict[name][0])
         chi_square.append(result_dict[name][1])
         intersection.append(result_dict[name][2])
         bhattacharyya.append(result_dict[name][3])
 
-    names[correlation.index(max(correlation))]
-    names[chi_square.index(min(chi_square))]
-    names[intersection.index(max(intersection))]
-    names[bhattacharyya.index(min(bhattacharyya))]
-
     cormax = []; chimin = []; intermax = []; bhattmin = []
-    for i in range(3):
+    for i in range(nums):
         cormax.append(correlation.index(max(correlation)))
         chimin.append(chi_square.index(min(chi_square)))
         intermax.append(intersection.index(max(intersection)))
@@ -127,44 +123,59 @@ def get_names(result_dict, nums):
         chi_square.remove(min(chi_square))
         intersection.remove(max(intersection))
         bhattacharyya.remove(min(bhattacharyya))
-    for i in range(3):
-        print(names[cormax[i]], end=', ')
-        print(names[chimin[i]], end= ', ')
-        print(names[intermax[i]], end=', ')
-        print(names[bhattmin[i]])
 
-    #####
-    plt.imshow(dataList[cormax[i]])
-    plt.imshow(dataList[chimin[i]])
-    plt.imshow(dataList[intermax[i]])
-    plt.imshow(dataList[bhattmin[i]])
+    return cormax, chimin, intermax, bhattmin
 
+def show_img(dataList, names, cormax, chimin, intermax, bhattmin):
     width=640; height=480
-    rows = 3; cols = 4
+    rows = len(cormax); cols = 4
     axes=[]
     fig=plt.figure()
-    j = 0
-    for a in range(rows*cols):
-        axes.append(fig.add_subplot(rows, cols, a+1) )
-        if a in [0,4,8]:
-            if a == 0: subplot_title=(f"{names[cormax[0]]}")
-            elif a == 4: subplot_title=(f"{names[cormax[1]]}")
-            else: subplot_title=(f"{names[cormax[2]]}")
-        elif a in [1,5,9]:
-            subplot_title=("Subplot"+str(a))
-        else:
-            subplot_title=("Subplot"+str(a))
+    for row in range(rows):
+        axes.append(fig.add_subplot(rows, cols, (row*4)+1))
+        subplot_title=(f"Correlation\n{names[cormax[row]]}")
         axes[-1].set_title(subplot_title)
-        plt.imshow(dataList[j])
-        j = j+1
+        plt.imshow(dataList[cormax[row]])
+
+        axes.append(fig.add_subplot(rows, cols, (row*4)+2))
+        subplot_title=(f"chi-square\n{names[chimin[row]]}")
+        axes[-1].set_title(subplot_title)
+        plt.imshow(dataList[chimin[row]])
+
+        axes.append(fig.add_subplot(rows, cols, (row*4)+3))
+        subplot_title=(f"intermax\n{names[intermax[row]]}")
+        axes[-1].set_title(subplot_title)
+        plt.imshow(dataList[intermax[row]])
+
+        axes.append(fig.add_subplot(rows, cols, (row*4)+4))
+        subplot_title=(f"bhattmin\n{names[bhattmin[row]]}")
+        axes[-1].set_title(subplot_title)
+        plt.imshow(dataList[bhattmin[row]])
     fig.tight_layout()
     plt.show()
 
-    #plt.imshow(test)
-    #print(test.shape)
+def show_usage(names, cormax, chimin, intermax, bhattmin):
+    usage_set = set()
+    for i in range(len(cormax)):
+        usage_set.add(names[cormax[i]])
+        usage_set.add(names[chimin[i]])
+        usage_set.add(names[intermax[i]])
+        usage_set.add(names[bhattmin[i]])
+    for i in range(len(usage_set)): print(list(usage_set)[i],':', usage_dict[list(usage_set)[i]])
 
-    #### 에러 발생 ###
-    #plt.imshow()
-    ########
-    # 총 16308472 0:4077118
 
+if __name__ == "__main__":
+    path_to_font = "C:/Windows/Fonts/H2GTRM.ttf"
+    font_name = fm.FontProperties(fname=path_to_font).get_name()
+    plt.rc('font', family=font_name)
+
+    dataList, names = get_data()
+    test = get_test("jubong.png")
+    usage_dict = get_data_usage()
+    plt.imshow(test)
+    nums = 3
+    result_dict = histogram_matching_flatten(dataList, names, test)
+    #result_dict = histogram_matching_unflatten(dataList, names, test)
+    cormax, chimin, intermax, bhattmin = get_idxlist(result_dict, nums)
+    show_img(dataList, names, cormax, chimin, intermax, bhattmin)
+    show_usage(names, cormax, chimin, intermax, bhattmin)
