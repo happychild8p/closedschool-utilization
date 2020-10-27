@@ -1,0 +1,170 @@
+#!/usr/bin/python3
+import cv2
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import re
+import pandas as pd
+
+def get_features():
+    features = ["agricultural_area","central_commercial_area","commercial_area","green_area",
+            "highway","industrial_area","management_area","mountains","nature_reserved_area"
+            ,"reserved_residential","residential_area","road","semi_residential_area",
+            "water"]
+    imglist = []
+    for idx in range(len(features)):
+        img_path = f'map_rgb_params/{features[idx]}.png'
+        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        imglist.append(img[1][1])
+    features_dict = dict(zip(features, imglist))
+    return features_dict
+
+def get_data():
+    f = open('C:/Users/Heedong/testset/names2.txt','rt', encoding='utf-8')
+    names = f.read().split("\n")
+    names_refined = []
+    pathes = []
+    for path in names:
+        path = re.sub("\s","", path)
+        pathes.append(f'C:/Users/Heedong/testset/{path}')
+        names_refined.append(path)
+    f.close()
+    datalist = []   ### opencv 한글경로 깨짐 문제 해결
+    for path in pathes:
+        stream = open(path.encode("utf-8"), 'rb')
+        tmpBytes = bytearray(stream.read())
+        npArray = np.asarray(tmpBytes, dtype=np.uint8)
+        datalist.append(cv2.imdecode(npArray, cv2.IMREAD_UNCHANGED))
+    return datalist, names_refined
+    #return cv2.imdecode(npArray, cv2.IMREAD_UNCHANGED)
+
+def get_test(filepath):
+    stream = open(filepath.encode("utf-8"), 'rb')
+    tmpBytes = bytearray(stream.read())
+    npArray = np.asarray(tmpBytes, dtype=np.uint8)
+    test = cv2.imdecode(npArray, cv2.IMREAD_UNCHANGED)
+    return test
+
+def np_hist_to_cv(np_histogram_output):
+    counts, bin_edges = np_histogram_output
+    return counts.ravel().astype('float32')
+
+def histogram_matching_flatten(dataList, names, test):
+    imsif = test.flatten()
+    drop_transparency = input("Do you want to remove transparency?[y/n] ")
+    if drop_transparency.lower() == 'y':
+        zfill = np.zeros(4077118)
+        imsif[4077118*3:] = zfill
+        #imsi = imsif.reshape(1453,2806,-1)
+    h1f = np.histogram(imsif)
+    values = []
+    for i in range(len(dataList)):
+        sub_val = []
+        data = dataList[i].flatten()
+        if drop_transparency.lower() == 'y':
+            data[4077118*3:] = zfill
+        h2f = np.histogram(data)
+        sub_val.append(round(cv2.compareHist(np_hist_to_cv(h1f), np_hist_to_cv(h2f), cv2.HISTCMP_CORREL), 5))
+        sub_val.append(round(cv2.compareHist(np_hist_to_cv(h1f), np_hist_to_cv(h2f), cv2.HISTCMP_CHISQR), 5))
+        sub_val.append(round(cv2.compareHist(np_hist_to_cv(h1f), np_hist_to_cv(h2f), cv2.HISTCMP_INTERSECT), 5))
+        sub_val.append(round(cv2.compareHist(np_hist_to_cv(h1f), np_hist_to_cv(h2f), cv2.HISTCMP_BHATTACHARYYA), 5))
+        values.append(sub_val)
+    return dict(zip(names, values))
+
+def histogram_matching_unflatten(dataList, names, test):
+    imsi = test
+    drop_transparency = input("Do you want to remove transparency?[y/n] ")
+    if drop_transparency.lower() == 'y':
+        imsif = imsi.flatten()
+        zfill = np.zeros(4077118)
+        imsif[4077118*3:] = zfill
+        imsi = imsif.reshape(1453,2806,-1)
+    h1 = np.histogram(imsi)
+    values = []
+    for i in range(len(dataList)):
+        sub_val = []
+        data = dataList[i]
+        if drop_transparency.lower() == 'y':
+            dataf = data.flatten()
+            dataf[4077118*3:] = zfill
+            data = dataf.reshape(1453,2806,-1)
+        h2 = np.histogram(data)
+        sub_val.append(round(cv2.compareHist(np_hist_to_cv(h1), np_hist_to_cv(h2), cv2.HISTCMP_CORREL), 5))
+        sub_val.append(round(cv2.compareHist(np_hist_to_cv(h1), np_hist_to_cv(h2), cv2.HISTCMP_CHISQR), 5))
+        sub_val.append(round(cv2.compareHist(np_hist_to_cv(h1), np_hist_to_cv(h2), cv2.HISTCMP_INTERSECT), 5))
+        sub_val.append(round(cv2.compareHist(np_hist_to_cv(h1), np_hist_to_cv(h2), cv2.HISTCMP_BHATTACHARYYA), 5))
+        values.append(sub_val)
+    return dict(zip(names, values))
+
+if __name__ == "__main__":
+    dataList, names = get_data()
+    test = get_test("jubong.png")
+
+    #result_dict = histogram_matching_flatten(dataList, names, test)
+    result_dict = histogram_matching_unflatten(dataList, names, test)
+
+def get_names(result_dict, nums):
+    correlation = []; chi_square = []; intersection = []; bhattacharyya = []; result_image_names = []
+    for name in names:
+        correlation.append(result_dict[name][0])
+        chi_square.append(result_dict[name][1])
+        intersection.append(result_dict[name][2])
+        bhattacharyya.append(result_dict[name][3])
+
+    names[correlation.index(max(correlation))]
+    names[chi_square.index(min(chi_square))]
+    names[intersection.index(max(intersection))]
+    names[bhattacharyya.index(min(bhattacharyya))]
+
+    cormax = []; chimin = []; intermax = []; bhattmin = []
+    for i in range(3):
+        cormax.append(correlation.index(max(correlation)))
+        chimin.append(chi_square.index(min(chi_square)))
+        intermax.append(intersection.index(max(intersection)))
+        bhattmin.append(bhattacharyya.index(min(bhattacharyya)))
+
+        correlation.remove(max(correlation))
+        chi_square.remove(min(chi_square))
+        intersection.remove(max(intersection))
+        bhattacharyya.remove(min(bhattacharyya))
+    for i in range(3):
+        print(names[cormax[i]], end=', ')
+        print(names[chimin[i]], end= ', ')
+        print(names[intermax[i]], end=', ')
+        print(names[bhattmin[i]])
+
+    #####
+    plt.imshow(dataList[cormax[i]])
+    plt.imshow(dataList[chimin[i]])
+    plt.imshow(dataList[intermax[i]])
+    plt.imshow(dataList[bhattmin[i]])
+
+    width=640; height=480
+    rows = 3; cols = 4
+    axes=[]
+    fig=plt.figure()
+    j = 0
+    for a in range(rows*cols):
+        axes.append(fig.add_subplot(rows, cols, a+1) )
+        if a in [0,4,8]:
+            if a == 0: subplot_title=(f"{names[cormax[0]]}")
+            elif a == 4: subplot_title=(f"{names[cormax[1]]}")
+            else: subplot_title=(f"{names[cormax[2]]}")
+        elif a in [1,5,9]:
+            subplot_title=("Subplot"+str(a))
+        else:
+            subplot_title=("Subplot"+str(a))
+        axes[-1].set_title(subplot_title)
+        plt.imshow(dataList[j])
+        j = j+1
+    fig.tight_layout()
+    plt.show()
+
+    #plt.imshow(test)
+    #print(test.shape)
+
+    #### 에러 발생 ###
+    #plt.imshow()
+    ########
+    # 총 16308472 0:4077118
+
