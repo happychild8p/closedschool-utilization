@@ -38,6 +38,7 @@ def get_data():
         datalist.append(cv2.imdecode(npArray, cv2.IMREAD_UNCHANGED))
     return datalist, names_refined
     #return cv2.imdecode(npArray, cv2.IMREAD_UNCHANGED)
+
 def get_data_usage():
     f = open('C:/Users/Heedong/testset/names_usage.txt','rt', encoding='utf-8')
     li=[]; usage_dict = {}
